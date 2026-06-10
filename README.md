@@ -11,7 +11,7 @@ Gerenciador de área de transferência nativo para macOS, construído com Swift 
 Cole no Terminal e pressione Enter:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Italovini223/mac-clipboard/main/install.sh | bash
 ```
 
 O script faz tudo automaticamente:
@@ -29,7 +29,7 @@ Após a instalação, o app aparece na barra de menus. Use **⌥V** para abrir o
 
 ### Opção 2 — Download manual
 
-1. Acesse a página de [Releases](https://github.com/SEU_USUARIO/SEU_REPOSITORIO/releases/latest)
+1. Acesse a página de [Releases](https://github.com/Italovini223/mac-clipboard/releases/latest)
 2. Baixe o arquivo `ClipboardManager-vX.X.X-universal.zip`
 3. Extraia o `.zip` — você verá `Clipboard Manager.app`
 4. Arraste para `/Applications`
@@ -62,8 +62,8 @@ Para desenvolvedores que queiram compilar o projeto localmente.
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
-cd SEU_REPOSITORIO
+git clone https://github.com/Italovini223/mac-clipboard.git
+cd mac-clipboard
 
 # 2. Gere o projeto Xcode (baixa dependências SPM automaticamente)
 ./generate.sh

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Clipboard Manager — instalador via curl
 # Uso:
-#   curl -fsSL https://raw.githubusercontent.com/SEU_USER/SEU_REPO/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Italovini223/mac-clipboard/main/install.sh | bash
 #
 # O script baixa a versão mais recente do GitHub Releases,
 # instala em /Applications e remove o atributo de quarentena.
@@ -9,7 +9,7 @@
 set -euo pipefail
 
 # ── Configuração ──────────────────────────────────────────────────────────────
-GITHUB_REPO="SEU_USUARIO/SEU_REPOSITORIO"   # ← Altere para o seu repo do GitHub
+GITHUB_REPO="Italovini223/mac-clipboard"
 APP_NAME="Clipboard Manager"
 INSTALL_DIR="/Applications"
 # ─────────────────────────────────────────────────────────────────────────────
