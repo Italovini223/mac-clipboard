@@ -6,6 +6,7 @@ import Observation
 final class ClipboardViewModel {
     var items: [ClipboardItem] = []
     var selectedIndex: Int = 0
+    var popupOpenCount: Int = 0
     var searchQuery: String = "" {
         didSet { scheduleSearch() }
     }
@@ -35,6 +36,7 @@ final class ClipboardViewModel {
     }
 
     func onPopupOpened() {
+        popupOpenCount += 1
         searchQuery = ""
         selectedIndex = 0
         items = storage.fetchAll()

@@ -33,6 +33,10 @@ struct MainPopupView: View {
         }
         .onKeyPress(.escape) { onClose(); return .handled }
         .onAppear { searchFocused = true }
+        // Re-focuses the search field on every open (onAppear fires only on first render)
+        .task(id: viewModel.popupOpenCount) {
+            searchFocused = true
+        }
     }
 
     // MARK: - Subviews

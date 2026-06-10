@@ -7,6 +7,9 @@ final class PopupWindowController {
     private let viewModel: ClipboardViewModel
     private var previousApp: NSRunningApplication?
     private var outsideClickMonitor: Any?
+    // Guards against didResignKeyNotification firing immediately after show()
+    // (happens on macOS 14 when activation hasn't settled yet)
+    private var isOpening = false
 
     init(viewModel: ClipboardViewModel) {
         self.viewModel = viewModel
@@ -21,8 +24,22 @@ final class PopupWindowController {
         guard let panel else { return }
 
         positionPanel(panel)
+
+        isOpening = true
+        // Activate before makeKeyAndOrderFront so macOS 14 honours the request
+        if #available(macOS 14.0, *) {
+            NSApp.activate()
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
         panel.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+
+        // Give the window system time to settle before re-enabling resign-key hiding
+        Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            isOpening = false
+        }
+
         viewModel.onPopupOpened()
 
         outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -58,9 +75,9 @@ final class PopupWindowController {
             backing: .buffered,
             defer: false
         )
-        p.level          = .popUpMenu
-        p.isFloatingPanel = true
-        p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        p.level               = .popUpMenu
+        p.isFloatingPanel     = true
+        p.collectionBehavior  = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.isMovableByWindowBackground = false
         p.backgroundColor = .clear
         p.hasShadow = false
@@ -71,7 +88,10 @@ final class PopupWindowController {
             object: p,
             queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.hide() }
+            MainActor.assumeIsolated {
+                guard let self, !self.isOpening else { return }
+                self.hide()
+            }
         }
 
         panel = p
