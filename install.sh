@@ -46,10 +46,25 @@ done
 # ── 3. Obter URL da release mais recente ─────────────────────────────────────
 log "Verificando última versão no GitHub…"
 
-RELEASE_INFO=$(curl -fsSL \
+_JSON_TMP=$(mktemp)
+HTTP_STATUS=$(curl -sL --max-time 20 \
     -H "Accept: application/vnd.github+json" \
-    "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" 2>/dev/null) \
-    || err "Não foi possível acessar GitHub Releases. Verifique sua conexão ou o repositório '${GITHUB_REPO}'."
+    -o "$_JSON_TMP" \
+    -w "%{http_code}" \
+    "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" 2>/dev/null) || HTTP_STATUS="000"
+
+RELEASE_INFO=$(cat "$_JSON_TMP" 2>/dev/null || echo "")
+rm -f "$_JSON_TMP"
+
+case "$HTTP_STATUS" in
+    200) ;;
+    404) err "Nenhuma release publicada em '${GITHUB_REPO}'.
+       Crie uma release com:  git tag v1.x.x && git push origin v1.x.x
+       Ou acesse: https://github.com/${GITHUB_REPO}/releases" ;;
+    403|429) err "Limite de requests da API do GitHub atingido. Aguarde alguns minutos e tente novamente." ;;
+    ""|000) err "Sem conexão com o GitHub. Verifique sua internet e tente novamente." ;;
+    *) err "Erro HTTP ${HTTP_STATUS} ao acessar GitHub Releases do repositório '${GITHUB_REPO}'." ;;
+esac
 
 VERSION=$(echo "$RELEASE_INFO" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
 DOWNLOAD_URL=$(echo "$RELEASE_INFO" | grep '"browser_download_url"' | grep '\.zip' | head -1 | sed -E 's/.*"browser_download_url": *"([^"]+)".*/\1/')
