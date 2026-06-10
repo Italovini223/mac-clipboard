@@ -46,31 +46,40 @@ done
 # ── 3. Obter URL da release mais recente ─────────────────────────────────────
 log "Verificando última versão no GitHub…"
 
+VERSION=""
+DOWNLOAD_URL=""
+
+# Abordagem 1: GitHub API
 _JSON_TMP=$(mktemp)
-HTTP_STATUS=$(curl -sL --max-time 20 \
+HTTP_STATUS=$(curl -sL --max-time 15 \
     -H "Accept: application/vnd.github+json" \
     -o "$_JSON_TMP" \
     -w "%{http_code}" \
     "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" 2>/dev/null) || HTTP_STATUS="000"
 
-RELEASE_INFO=$(cat "$_JSON_TMP" 2>/dev/null || echo "")
+if [[ "$HTTP_STATUS" == "200" ]]; then
+    VERSION=$(grep '"tag_name"' "$_JSON_TMP" | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/' || true)
+    DOWNLOAD_URL=$(grep '"browser_download_url"' "$_JSON_TMP" | grep '\.zip' | head -1 \
+        | sed -E 's/.*"browser_download_url": *"([^"]+)".*/\1/' || true)
+fi
 rm -f "$_JSON_TMP"
 
-case "$HTTP_STATUS" in
-    200) ;;
-    404) err "Nenhuma release publicada em '${GITHUB_REPO}'.
-       Crie uma release com:  git tag v1.x.x && git push origin v1.x.x
-       Ou acesse: https://github.com/${GITHUB_REPO}/releases" ;;
-    403|429) err "Limite de requests da API do GitHub atingido. Aguarde alguns minutos e tente novamente." ;;
-    ""|000) err "Sem conexão com o GitHub. Verifique sua internet e tente novamente." ;;
-    *) err "Erro HTTP ${HTTP_STATUS} ao acessar GitHub Releases do repositório '${GITHUB_REPO}'." ;;
-esac
+# Abordagem 2: seguir redirect /releases/latest (fallback — não usa api.github.com)
+if [[ -z "$VERSION" ]]; then
+    REDIRECT_URL=$(curl -sL --max-time 15 \
+        -o /dev/null \
+        -w "%{url_effective}" \
+        "https://github.com/${GITHUB_REPO}/releases/latest" 2>/dev/null) || REDIRECT_URL=""
+    VERSION=$(echo "$REDIRECT_URL" | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+([.-][a-zA-Z0-9]+)?' \
+        | head -1 || true)
+    if [[ -n "$VERSION" ]]; then
+        DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/${VERSION}/ClipboardManager-${VERSION}-universal.zip"
+    fi
+fi
 
-VERSION=$(echo "$RELEASE_INFO" | grep '"tag_name"' | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
-DOWNLOAD_URL=$(echo "$RELEASE_INFO" | grep '"browser_download_url"' | grep '\.zip' | head -1 | sed -E 's/.*"browser_download_url": *"([^"]+)".*/\1/')
-
-[[ -z "$VERSION" ]]      && err "Nenhuma release encontrada em '${GITHUB_REPO}'."
-[[ -z "$DOWNLOAD_URL" ]] && err "Nenhum arquivo .zip encontrado na release '${VERSION}'."
+[[ -z "$VERSION" ]] && err "Não foi possível obter a versão mais recente.
+       Verifique sua conexão ou acesse: https://github.com/${GITHUB_REPO}/releases"
+[[ -z "$DOWNLOAD_URL" ]] && err "Link de download não encontrado para a release '${VERSION}'."
 
 ok "Versão encontrada: ${VERSION}"
 
