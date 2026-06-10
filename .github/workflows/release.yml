@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     name: Build Universal Binary
-    runs-on: macos-14          # Apple Silicon (M1) — Xcode 15 pré-instalado
+    runs-on: macos-15          # Apple Silicon — Xcode 16 pré-instalado
 
     steps:
       # ── 1. Checkout ─────────────────────────────────────────────────────────
