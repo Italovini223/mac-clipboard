@@ -1,0 +1,28 @@
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+.build/
+*.o
+*.d
+*.dia
+
+# Swift Package Manager cache (gerado pelo generate.sh e GitHub Actions)
+.spm-cache/
+.swiftpm/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Build artifacts
+build/
+*.zip
+*.dmg
+*.pkg
+
+# Xcode project gerado pelo XcodeGen — não commitar.
+# Rode ./generate.sh para recriar localmente.
+*.xcodeproj/

@@ -1,0 +1,95 @@
+name: Build & Release
+
+# Dispara quando um tag v* é criado (ex: v1.0.0)
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build Universal Binary
+    runs-on: macos-14          # Apple Silicon (M1) — Xcode 15 pré-instalado
+
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Seleciona Xcode 15 ───────────────────────────────────────────────
+      - name: Select Xcode 15
+        run: sudo xcode-select -s /Applications/Xcode_15.2.app/Contents/Developer
+
+      # ── 3. Instala XcodeGen ─────────────────────────────────────────────────
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # ── 4. Gera o .xcodeproj ────────────────────────────────────────────────
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
+      # ── 5. Resolve dependências SPM (GRDB) ──────────────────────────────────
+      - name: Resolve SPM packages
+        run: |
+          xcodebuild \
+            -scheme ClipboardManager \
+            -resolvePackageDependencies \
+            -clonedSourcePackagesDirPath .spm-cache
+
+      # ── 6. Build universal (arm64 + x86_64) ─────────────────────────────────
+      - name: Build
+        run: |
+          xcodebuild \
+            -scheme ClipboardManager \
+            -configuration Release \
+            -clonedSourcePackagesDirPath .spm-cache \
+            -derivedDataPath DerivedData \
+            ONLY_ACTIVE_ARCH=NO \
+            ARCHS="arm64 x86_64" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            build
+
+      # ── 7. Assina ad-hoc (permite rodar sem Developer ID) ───────────────────
+      - name: Ad-hoc sign
+        run: |
+          APP="DerivedData/Build/Products/Release/Clipboard Manager.app"
+          codesign --force --deep --sign "-" "$APP"
+
+      # ── 8. Empacota em ZIP ──────────────────────────────────────────────────
+      - name: Package ZIP
+        run: |
+          cd "DerivedData/Build/Products/Release"
+          zip -r "$GITHUB_WORKSPACE/ClipboardManager-${{ github.ref_name }}-universal.zip" \
+            "Clipboard Manager.app"
+          echo "ZIP criado:"
+          ls -lh "$GITHUB_WORKSPACE/ClipboardManager-${{ github.ref_name }}-universal.zip"
+
+      # ── 9. Cria GitHub Release e faz upload do ZIP ──────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Clipboard Manager ${{ github.ref_name }}"
+          files: ClipboardManager-${{ github.ref_name }}-universal.zip
+          body: |
+            ## Instalação rápida
+
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | bash
+            ```
+
+            Ou baixe o ZIP abaixo e mova `Clipboard Manager.app` para `/Applications`.
+
+            ---
+
+            ### Requisitos
+            - macOS 14 (Sonoma) ou superior
+            - Permissão de Acessibilidade (solicitada no primeiro uso, necessária para o auto-paste)
+
+            ### Nota de segurança
+            Este app não é notarizado pela Apple (sem Developer ID).
+            O script de instalação remove o atributo de quarentena automaticamente.
+            Para mais detalhes, veja o README.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

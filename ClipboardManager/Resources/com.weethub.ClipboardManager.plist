@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent plist. Copy to ~/Library/LaunchAgents/ and run:
+    launchctl load ~/Library/LaunchAgents/com.weethub.ClipboardManager.plist
+  The app uses SMAppService.mainApp.register() at runtime (preferred on macOS 13+),
+  so manual installation is only needed as a fallback.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.weethub.ClipboardManager</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Applications/Clipboard Manager.app/Contents/MacOS/ClipboardManager</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<false/>
+	<key>StandardOutPath</key>
+	<string>/tmp/com.weethub.ClipboardManager.log</string>
+	<key>StandardErrorPath</key>
+	<string>/tmp/com.weethub.ClipboardManager.error.log</string>
+</dict>
+</plist>
