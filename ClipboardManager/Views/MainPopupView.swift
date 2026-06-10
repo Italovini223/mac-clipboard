@@ -108,7 +108,7 @@ struct MainPopupView: View {
             Image(systemName: viewModel.searchQuery.isEmpty ? "doc.on.clipboard" : "magnifyingglass")
                 .font(.system(size: 32))
                 .foregroundStyle(.quaternary)
-            Text(viewModel.searchQuery.isEmpty ? "No clipboard history yet" : "No results for "\(viewModel.searchQuery)"")
+            Text(viewModel.searchQuery.isEmpty ? "No clipboard history yet" : "No results for \"\(viewModel.searchQuery)\"")
                 .font(.system(size: 13))
                 .foregroundStyle(.tertiary)
         }

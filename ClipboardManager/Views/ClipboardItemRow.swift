@@ -38,7 +38,7 @@ struct ClipboardItemRow: View {
                     }
                     Text(item.relativeTime)
                         .font(.system(size: 10))
-                        .foregroundStyle(isSelected ? .white.opacity(0.7) : .tertiary)
+                        .foregroundStyle(isSelected ? Color.white.opacity(0.7) : Color.secondary.opacity(0.5))
                 }
             }
 

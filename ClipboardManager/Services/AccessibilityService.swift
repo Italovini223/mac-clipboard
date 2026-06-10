@@ -5,15 +5,19 @@ final class AccessibilityService: Sendable {
     static let shared = AccessibilityService()
     private init() {}
 
+    // C global var is not Sendable in Swift 6 — capture the string value once at load time
+    nonisolated(unsafe) private static let promptKey: String =
+        kAXTrustedCheckOptionPrompt.takeRetainedValue() as String
+
     var isAccessibilityGranted: Bool {
         AXIsProcessTrustedWithOptions([
-            kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: false
+            Self.promptKey: false
         ] as CFDictionary)
     }
 
     func requestAccessibilityIfNeeded() {
         AXIsProcessTrustedWithOptions([
-            kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true
+            Self.promptKey: true
         ] as CFDictionary)
     }
 

@@ -6,7 +6,7 @@ struct ClipboardManagerApp: App {
 
     var body: some Scene {
         // Settings window (opened via ⌘, or menu)
-        Settings {
+        SwiftUI.Settings {
             SettingsView(settings: appDelegate.settings ?? Settings())
         }
 

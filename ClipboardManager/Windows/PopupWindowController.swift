@@ -26,7 +26,7 @@ final class PopupWindowController {
         viewModel.onPopupOpened()
 
         outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            self?.hide()
+            Task { @MainActor [weak self] in self?.hide() }
         }
     }
 
@@ -71,7 +71,7 @@ final class PopupWindowController {
             object: p,
             queue: .main
         ) { [weak self] _ in
-            self?.hide()
+            MainActor.assumeIsolated { self?.hide() }
         }
 
         panel = p
