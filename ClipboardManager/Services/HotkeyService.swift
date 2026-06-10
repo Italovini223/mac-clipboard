@@ -8,8 +8,9 @@ final class HotkeyService {
     // nonisolated(unsafe) allows the C callback to access this without actor isolation checks.
     nonisolated(unsafe) private static var onTriggered: (() -> Void)?
 
-    private var hotKeyRef: EventHotKeyRef?
-    private var eventHandlerRef: EventHandlerRef?
+    // nonisolated(unsafe) so deinit (which is always nonisolated in Swift 6) can access these raw C pointers.
+    nonisolated(unsafe) private var hotKeyRef: EventHotKeyRef?
+    nonisolated(unsafe) private var eventHandlerRef: EventHandlerRef?
 
     func register(keyCode: UInt32 = 9, // kVK_ANSI_V
                   modifiers: UInt32 = UInt32(optionKey),
@@ -35,7 +36,7 @@ final class HotkeyService {
             &eventHandlerRef
         )
 
-        var hotKeyID = EventHotKeyID(signature: 0x434D4752, id: 1) // 'CMGR'
+        let hotKeyID = EventHotKeyID(signature: 0x434D4752, id: 1) // 'CMGR'
         RegisterEventHotKey(keyCode, modifiers, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
     }
 

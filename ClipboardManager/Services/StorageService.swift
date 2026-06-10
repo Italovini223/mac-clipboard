@@ -12,7 +12,6 @@ final class StorageService {
     }
 
     func insert(_ item: ClipboardItem) {
-        var item = item
         try? db.write { db in
             try item.insert(db)
             self.pruneIfNeeded(db: db)
