@@ -53,8 +53,21 @@ final class PopupWindowController {
             outsideClickMonitor = nil
         }
         panel?.orderOut(nil)
-        previousApp?.activate(options: .activateIgnoringOtherApps)
+
+        let shouldPaste = viewModel.pendingPaste
+        viewModel.pendingPaste = false
         viewModel.onPopupClosed()
+
+        previousApp?.activate(options: .activateIgnoringOtherApps)
+
+        if shouldPaste {
+            // Delay starts AFTER previousApp?.activate() so the target app has
+            // time to become frontmost before the simulated Cmd+V is sent.
+            Task {
+                try? await Task.sleep(for: .milliseconds(300))
+                AccessibilityService.shared.simulatePaste()
+            }
+        }
     }
 
     func toggle() {

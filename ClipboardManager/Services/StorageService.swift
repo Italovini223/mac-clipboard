@@ -13,6 +13,16 @@ final class StorageService {
 
     func insert(_ item: ClipboardItem) {
         try? db.write { db in
+            // Skip if content is identical to the most recent item (avoids consecutive duplicates).
+            if item.contentType != .image,
+               let last = try ClipboardItem
+                   .order(Column("created_at").desc)
+                   .limit(1)
+                   .fetchOne(db),
+               last.content == item.content,
+               last.contentType == item.contentType {
+                return
+            }
             try item.insert(db)
             self.pruneIfNeeded(db: db)
             self.pruneByAge(db: db)

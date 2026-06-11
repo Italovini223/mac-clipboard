@@ -7,6 +7,7 @@ final class ClipboardViewModel {
     var items: [ClipboardItem] = []
     var selectedIndex: Int = 0
     var popupOpenCount: Int = 0
+    var pendingPaste: Bool = false
     var searchQuery: String = "" {
         didSet { scheduleSearch() }
     }
@@ -63,10 +64,8 @@ final class ClipboardViewModel {
         // Record AFTER writing so we capture the exact post-write changeCount to skip.
         monitor.lastWrittenChangeCount = pb.changeCount
 
-        Task {
-            try? await Task.sleep(for: .milliseconds(200))
-            AccessibilityService.shared.simulatePaste()
-        }
+        // Signal hide() to simulate paste AFTER the previous app is activated.
+        pendingPaste = true
     }
 
     func toggleFavorite(_ item: ClipboardItem) {
