@@ -5,6 +5,7 @@ struct MainPopupView: View {
     var onClose: () -> Void
 
     @FocusState private var searchFocused: Bool
+    @State private var showingClearConfirmation = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,6 +14,9 @@ struct MainPopupView: View {
             itemList
             if viewModel.items.isEmpty {
                 emptyState
+            } else {
+                Divider().opacity(0.5)
+                footer
             }
         }
         .frame(width: 640)
@@ -104,6 +108,28 @@ struct MainPopupView: View {
                     proxy.scrollTo(idx, anchor: .center)
                 }
             }
+        }
+    }
+
+    private var footer: some View {
+        HStack {
+            Spacer()
+            Button {
+                showingClearConfirmation = true
+            } label: {
+                Label("Clear History", systemImage: "trash")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+        }
+        .alert("Clear Clipboard History?", isPresented: $showingClearConfirmation) {
+            Button("Clear", role: .destructive) { viewModel.clearHistory() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Favorited items will not be removed.")
         }
     }
 

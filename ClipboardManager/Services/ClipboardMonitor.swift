@@ -4,7 +4,9 @@ import Foundation
 @MainActor
 final class ClipboardMonitor {
     var onNewItem: (@MainActor (ClipboardItem) -> Void)?
-    var isWritingToClipboard = false
+    // Stores the exact NSPasteboard.changeCount written by the app so we can skip it.
+    // More robust than a boolean: works even if the user copies something in the same 500ms window.
+    var lastWrittenChangeCount: Int = -1
 
     private var timer: Timer?
     private var lastChangeCount: Int = NSPasteboard.general.changeCount
@@ -51,8 +53,8 @@ final class ClipboardMonitor {
         guard currentCount != lastChangeCount else { return }
         lastChangeCount = currentCount
 
-        if isWritingToClipboard {
-            isWritingToClipboard = false
+        if currentCount == lastWrittenChangeCount {
+            lastWrittenChangeCount = -1
             return
         }
 

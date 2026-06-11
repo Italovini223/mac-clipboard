@@ -48,7 +48,6 @@ final class ClipboardViewModel {
     }
 
     func selectItem(_ item: ClipboardItem) {
-        monitor.isWritingToClipboard = true
         let pb = NSPasteboard.general
         pb.clearContents()
 
@@ -60,6 +59,9 @@ final class ClipboardViewModel {
                 pb.writeObjects([url as NSURL])
             }
         }
+
+        // Record AFTER writing so we capture the exact post-write changeCount to skip.
+        monitor.lastWrittenChangeCount = pb.changeCount
 
         Task {
             try? await Task.sleep(for: .milliseconds(200))
