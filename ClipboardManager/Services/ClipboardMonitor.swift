@@ -32,12 +32,13 @@ final class ClipboardMonitor {
 
     func start() {
         lastChangeCount = NSPasteboard.general.changeCount
-        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+        let t = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.checkForChanges()
             }
         }
-        RunLoop.main.add(timer!, forMode: .common)
+        RunLoop.main.add(t, forMode: .common)
+        timer = t
     }
 
     func stop() {
@@ -51,21 +52,37 @@ final class ClipboardMonitor {
         let pb = NSPasteboard.general
         let currentCount = pb.changeCount
         guard currentCount != lastChangeCount else { return }
-        lastChangeCount = currentCount
 
+        // Skip writes we made ourselves when the user selects an item from history.
         if currentCount == lastWrittenChangeCount {
+            lastChangeCount = currentCount
             lastWrittenChangeCount = -1
             return
         }
 
         let sourceApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
 
-        // Skip ignored apps
+        // Skip ignored apps.
         if let app = sourceApp, settings.ignoredApps.contains(app) {
+            lastChangeCount = currentCount
             return
         }
 
-        guard let item = buildItem(from: pb, sourceApp: sourceApp) else { return }
+        // Try to read the pasteboard. If buildItem returns nil the pasteboard may be
+        // between NSPasteboard.clearContents() and the actual data write — both share
+        // the same changeCount. We intentionally leave lastChangeCount unchanged so the
+        // next timer tick retries at the same changeCount and reads the real content.
+        // If the pasteboard already has declared types but none we can handle, commit
+        // the changeCount so we don't loop forever on unreadable proprietary content.
+        guard let item = buildItem(from: pb, sourceApp: sourceApp) else {
+            if let types = pb.types, !types.isEmpty {
+                lastChangeCount = currentCount
+            }
+            return
+        }
+
+        // Content successfully read — commit the change count.
+        lastChangeCount = currentCount
 
         // Skip sensitive content
         if isSensitive(item.content) { return }
