@@ -23,6 +23,12 @@ struct SettingsView: View {
 private struct GeneralTab: View {
     @Bindable var settings: Settings
 
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+        let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+        return "v\(version) (build \(build))"
+    }
+
     var body: some View {
         Form {
             Section("Behavior") {
@@ -46,6 +52,14 @@ private struct GeneralTab: View {
                         value: $settings.retentionDays,
                         in: 1...365,
                         step: 1)
+            }
+
+            Section("About") {
+                LabeledContent("Version") {
+                    Text(appVersion)
+                        .foregroundStyle(.secondary)
+                        .font(.system(.body, design: .monospaced))
+                }
             }
         }
         .formStyle(.grouped)

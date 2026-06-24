@@ -22,5 +22,13 @@ struct MenuBarMenuView: View {
 
         Button("Quit Clipboard Manager") { NSApp.terminate(nil) }
             .keyboardShortcut("q", modifiers: .command)
+
+        Divider()
+
+        if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+            Text("Version \(version)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
