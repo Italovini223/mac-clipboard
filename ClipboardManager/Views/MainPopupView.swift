@@ -94,7 +94,9 @@ struct MainPopupView: View {
                             onFavoriteToggle: { viewModel.toggleFavorite(item) },
                             onDelete:         { viewModel.deleteItem(item) }
                         )
-                        .id(index)
+                        // Use the stable database ID — not the position index — so SwiftUI
+                        // correctly identifies each row when the list is reordered or prepended.
+                        .id(item.id)
 
                         if index < viewModel.items.count - 1 {
                             Divider().padding(.leading, 38).opacity(0.4)
@@ -104,8 +106,9 @@ struct MainPopupView: View {
             }
             .frame(maxHeight: 400)
             .onChange(of: viewModel.selectedIndex) { _, idx in
+                guard viewModel.items.indices.contains(idx) else { return }
                 withAnimation(.easeInOut(duration: 0.1)) {
-                    proxy.scrollTo(idx, anchor: .center)
+                    proxy.scrollTo(viewModel.items[idx].id, anchor: .center)
                 }
             }
         }
