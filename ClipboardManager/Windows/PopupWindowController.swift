@@ -66,15 +66,24 @@ final class PopupWindowController {
         viewModel.pendingPaste = false
         viewModel.onPopupClosed()
 
-        previousApp?.activate(options: .activateIgnoringOtherApps)
+        let target = previousApp
 
         if shouldPaste {
-            // Delay starts AFTER previousApp?.activate() so the target app has
-            // time to become frontmost before the simulated Cmd+V is sent.
+            // show() never called NSApp.activate(), so the previous app was never
+            // deactivated. A plain target.activate() is a no-op for an already-active
+            // app and the text field won't receive the ⌘V. Briefly activate our own
+            // app first (the panel is already hidden, so the user sees nothing) so
+            // that the subsequent target.activate() triggers a real focus-restoration
+            // cycle and the text field gets key status before the paste fires.
+            if #available(macOS 14.0, *) { NSApp.activate() } else { NSApp.activate(ignoringOtherApps: true) }
             Task {
+                try? await Task.sleep(for: .milliseconds(50))
+                target?.activate(options: .activateIgnoringOtherApps)
                 try? await Task.sleep(for: .milliseconds(300))
                 AccessibilityService.shared.simulatePaste()
             }
+        } else {
+            target?.activate(options: .activateIgnoringOtherApps)
         }
     }
 
