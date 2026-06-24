@@ -73,9 +73,19 @@ final class ClipboardMonitor {
         onNewItem?(item)
     }
 
+    private static let imagePasteboardTypes: [NSPasteboard.PasteboardType] = [
+        .tiff,
+        NSPasteboard.PasteboardType("public.png"),
+        NSPasteboard.PasteboardType("public.jpeg"),
+        NSPasteboard.PasteboardType("public.heic"),
+    ]
+
     private func buildItem(from pb: NSPasteboard, sourceApp: String?) -> ClipboardItem? {
-        // Image
-        if let image = NSImage(pasteboard: pb) {
+        // Image — only match real image types; PDF is excluded because rich-text copies
+        // (from browsers, Notes, etc.) include a PDF representation alongside the text,
+        // which NSImage(pasteboard:) would otherwise accept, causing text to be stored as "[Image]".
+        if pb.availableType(from: Self.imagePasteboardTypes) != nil,
+           let image = NSImage(pasteboard: pb) {
             let tiff = image.tiffRepresentation
             let name = "[Image \(Int(image.size.width))×\(Int(image.size.height))]"
             return ClipboardItem(
