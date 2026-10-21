@@ -24,13 +24,25 @@ final class AccessibilityService: Sendable {
         AXIsProcessTrustedWithOptions([Self.promptKey: false] as CFDictionary)
     }
 
-    func requestAccessibilityIfNeeded() {
+    // O prompt do sistema aparece no máximo uma vez por execução.
+    private let hasPrompted = OSAllocatedUnfairLock(initialState: false)
+
+    /// Mostra o prompt do sistema, uma única vez por execução. Retorna false se já foi mostrado.
+    @discardableResult
+    func requestAccessibilityIfNeeded() -> Bool {
+        let shouldPrompt = hasPrompted.withLock { prompted in
+            defer { prompted = true }
+            return !prompted
+        }
+        guard shouldPrompt else { return false }
         AXIsProcessTrustedWithOptions([Self.promptKey: true] as CFDictionary)
+        return true
     }
 
-    /// Pede a permissão (se ainda não concedida) e abre Ajustes do Sistema → Acessibilidade.
+    /// Leva o usuário à permissão sem empilhar dois modais: se o prompt do sistema ainda não
+    /// foi mostrado, mostra só ele (tem botão para os Ajustes); senão abre só os Ajustes.
     func openAccessibilitySettings() {
-        if !isAccessibilityGranted { requestAccessibilityIfNeeded() }
+        if !isAccessibilityGranted, requestAccessibilityIfNeeded() { return }
         if let url = Self.settingsURL { NSWorkspace.shared.open(url) }
     }
 

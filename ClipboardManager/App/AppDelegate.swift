@@ -9,6 +9,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var settings: Settings!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Uma segunda instância duplicaria o prompt de Acessibilidade e brigaria pelo ⌥V.
+        if let bundleID = Bundle.main.bundleIdentifier,
+           let existing = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+               .first(where: { $0 != NSRunningApplication.current }) {
+            existing.activate()
+            NSApp.terminate(nil)
+            return
+        }
+
         settings = Settings()
 
         guard let sqliteManager = try? SQLiteManager() else {
