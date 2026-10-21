@@ -47,17 +47,14 @@ final class PopupWindowController {
         outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.leftMouseDown, .rightMouseDown]
         ) { [weak self] _ in
-            guard let self else { return }
-            // Keep the popup open when the user clicks inside the same app that was
-            // active when the popup opened — they may be clicking a text field to
-            // set (or change) the paste destination before selecting a history item.
-            let frontmostPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
-            if let prev = self.previousApp?.processIdentifier, frontmostPID == prev { return }
-            Task { @MainActor [weak self] in self?.hide() }
+            // Global monitors only see events delivered to other windows, so this fires
+            // for any click outside the popup — including inside the previous app.
+            // The click already gave focus to whatever the user clicked: don't take it back.
+            Task { @MainActor [weak self] in self?.hide(restoreFocus: false) }
         }
     }
 
-    func hide() {
+    func hide(restoreFocus: Bool = true) {
         if let monitor = outsideClickMonitor {
             NSEvent.removeMonitor(monitor)
             outsideClickMonitor = nil
@@ -73,7 +70,7 @@ final class PopupWindowController {
         if shouldPaste {
             Logger.paste.info("hide: paste requested, target=\(target?.bundleIdentifier ?? "nil", privacy: .public)")
             Task { await pasteIntoTarget(target) }
-        } else {
+        } else if restoreFocus {
             target?.activate(options: .activateIgnoringOtherApps)
         }
     }
@@ -164,12 +161,13 @@ final class PopupWindowController {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, !self.isOpening else { return }
-                // Don't close if the user clicked inside the same app that was
-                // active when the popup opened (e.g. clicking a text field to
-                // set or change the paste target).
+                // Same app still frontmost: key status moved within our own app (e.g. a
+                // context menu), not an outside click — those close via the click monitor.
                 let frontmostPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
                 if let prev = self.previousApp?.processIdentifier, frontmostPID == prev { return }
-                self.hide()
+                // The user switched apps (⌘Tab, Mission Control…): close without pulling
+                // focus back to the previous app.
+                self.hide(restoreFocus: false)
             }
         }
 

@@ -39,6 +39,32 @@ final class AccessibilityService: Sendable {
         return true
     }
 
+    private static let promptedVersionKey = "accessibilityPromptedVersion"
+
+    /// Chamado no launch. Mostra o prompt do sistema só se a permissão realmente faltar e
+    /// no máximo uma vez por versão do app (instalação nova ou atualização, já que a
+    /// assinatura ad-hoc invalida a permissão a cada versão). Nas demais aberturas, como o
+    /// login do Mac, o aviso fica só no menu da barra e em Settings.
+    @MainActor
+    func promptOnceIfNeeded() async {
+        // No login o tccd pode demorar a responder: confirma por alguns segundos antes de
+        // concluir que falta permissão.
+        for _ in 0..<5 {
+            if isAccessibilityGranted { return }
+            try? await Task.sleep(for: .seconds(1))
+        }
+        guard !isAccessibilityGranted else { return }
+
+        let version = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+        let defaults = UserDefaults.standard
+        guard defaults.string(forKey: Self.promptedVersionKey) != version else {
+            Logger.paste.info("promptOnceIfNeeded: já pedido nesta versão (\(version, privacy: .public)), sem novo prompt")
+            return
+        }
+        defaults.set(version, forKey: Self.promptedVersionKey)
+        requestAccessibilityIfNeeded()
+    }
+
     /// Leva o usuário à permissão sem empilhar dois modais: se o prompt do sistema ainda não
     /// foi mostrado, mostra só ele (tem botão para os Ajustes); senão abre só os Ajustes.
     func openAccessibilitySettings() {

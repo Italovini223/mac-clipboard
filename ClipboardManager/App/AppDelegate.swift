@@ -37,10 +37,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         viewModel.startMonitoring()
 
-        // Request accessibility for auto-paste (non-blocking prompt)
-        if !AccessibilityService.shared.isAccessibilityGranted {
-            AccessibilityService.shared.requestAccessibilityIfNeeded()
-        }
+        // Request accessibility for auto-paste (non-blocking prompt, once per app version)
+        Task { await AccessibilityService.shared.promptOnceIfNeeded() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
