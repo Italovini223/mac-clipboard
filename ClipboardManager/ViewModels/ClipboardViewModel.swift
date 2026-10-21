@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import os
 
 @Observable
 @MainActor
@@ -64,8 +65,9 @@ final class ClipboardViewModel {
         // Record AFTER writing so we capture the exact post-write changeCount to skip.
         monitor.lastWrittenChangeCount = pb.changeCount
 
-        // Signal hide() to simulate paste AFTER the previous app is activated.
+        // Signal hide() to simulate paste once the panel has given up key status.
         pendingPaste = true
+        Logger.paste.info("selectItem: type=\(item.contentType.rawValue, privacy: .public), wrote pasteboard (changeCount=\(pb.changeCount))")
     }
 
     func toggleFavorite(_ item: ClipboardItem) {

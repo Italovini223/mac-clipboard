@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import os
 
 @MainActor
 final class PopupWindowController {
@@ -10,6 +11,7 @@ final class PopupWindowController {
     // Guards against didResignKeyNotification firing immediately after show()
     // (happens on macOS 14 when activation hasn't settled yet)
     private var isOpening = false
+    private var hasWarnedAboutAccessibility = false
 
     init(viewModel: ClipboardViewModel) {
         self.viewModel = viewModel
@@ -69,19 +71,8 @@ final class PopupWindowController {
         let target = previousApp
 
         if shouldPaste {
-            // show() never called NSApp.activate(), so the previous app was never
-            // deactivated. A plain target.activate() is a no-op for an already-active
-            // app and the text field won't receive the ⌘V. Briefly activate our own
-            // app first (the panel is already hidden, so the user sees nothing) so
-            // that the subsequent target.activate() triggers a real focus-restoration
-            // cycle and the text field gets key status before the paste fires.
-            if #available(macOS 14.0, *) { NSApp.activate() } else { NSApp.activate(ignoringOtherApps: true) }
-            Task {
-                try? await Task.sleep(for: .milliseconds(50))
-                target?.activate(options: .activateIgnoringOtherApps)
-                try? await Task.sleep(for: .milliseconds(300))
-                AccessibilityService.shared.simulatePaste()
-            }
+            Logger.paste.info("hide: paste requested, target=\(target?.bundleIdentifier ?? "nil", privacy: .public)")
+            Task { await pasteIntoTarget(target) }
         } else {
             target?.activate(options: .activateIgnoringOtherApps)
         }
@@ -92,6 +83,59 @@ final class PopupWindowController {
     }
 
     // MARK: - Private
+
+    /// Posts ⌘V into the app that was frontmost when the popup opened.
+    /// The panel is non-activating, so that app normally never lost focus and no
+    /// activation is needed — we only wait for the panel to give up key status.
+    private func pasteIntoTarget(_ target: NSRunningApplication?) async {
+        await waitForPanelToResignKey()
+
+        if let target, NSWorkspace.shared.frontmostApplication?.processIdentifier != target.processIdentifier {
+            // The user switched apps while the popup was open: bring the target back
+            // and wait for the system to confirm before pasting.
+            let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "nil"
+            Logger.paste.info("pasteIntoTarget: frontmost=\(frontmost, privacy: .public) is not target, activating")
+            await ActivationWaiter().activateAndWait(target, timeout: .milliseconds(1000))
+        }
+
+        let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "nil"
+        Logger.paste.info("pasteIntoTarget: frontmost=\(frontmost, privacy: .public)")
+
+        if !(await AccessibilityService.shared.simulatePaste()) {
+            warnAboutAccessibilityOnce()
+        }
+    }
+
+    /// After orderOut the system hands key status back to the target app's window;
+    /// pasting before that lands the ⌘V on nothing.
+    private func waitForPanelToResignKey() async {
+        var waited = 0
+        while panel?.isKeyWindow == true, waited < 200 {
+            try? await Task.sleep(for: .milliseconds(10))
+            waited += 10
+        }
+        // Small settle time so the target's text field is first responder again.
+        try? await Task.sleep(for: .milliseconds(50))
+    }
+
+    /// The item is already on the clipboard, so the user can still ⌘V manually.
+    private func warnAboutAccessibilityOnce() {
+        guard !hasWarnedAboutAccessibility else { return }
+        hasWarnedAboutAccessibility = true
+
+        NSApp.activate()
+        let alert = NSAlert()
+        alert.messageText = "Auto-paste needs Accessibility permission"
+        alert.informativeText = "The item was copied to the clipboard — press ⌘V to paste it. "
+            + "To paste automatically, allow Clipboard Manager in System Settings → Privacy & Security → Accessibility. "
+            + "After updating the app you may need to remove and re-add it there."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Open System Settings")
+        alert.addButton(withTitle: "OK")
+        if alert.runModal() == .alertFirstButtonReturn {
+            AccessibilityService.shared.openAccessibilitySettings()
+        }
+    }
 
     private func createPanel() {
         let hosting = NSHostingView(rootView:
@@ -143,5 +187,45 @@ final class PopupWindowController {
         let x = sf.midX - pw / 2
         let y = sf.midY - ph / 2 + sf.height * 0.1
         panel.setFrame(NSRect(x: x, y: y, width: pw, height: ph), display: false)
+    }
+}
+
+/// Activates an app and suspends until NSWorkspace reports it active (or the timeout hits).
+@MainActor
+private final class ActivationWaiter {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var observer: NSObjectProtocol?
+
+    func activateAndWait(_ app: NSRunningApplication, timeout: Duration) async {
+        let pid = app.processIdentifier
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            continuation = cont
+            observer = NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didActivateApplicationNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] note in
+                let activated = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?
+                    .processIdentifier
+                MainActor.assumeIsolated {
+                    if activated == pid { self?.finish(timedOut: false) }
+                }
+            }
+            // .activateIgnoringOtherApps has no effect on macOS 14+, so don't pass it.
+            app.activate(options: [])
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: timeout)
+                self?.finish(timedOut: true)
+            }
+        }
+    }
+
+    private func finish(timedOut: Bool) {
+        guard let cont = continuation else { return }
+        continuation = nil
+        if let observer { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+        observer = nil
+        if timedOut { Logger.paste.error("ActivationWaiter: timed out waiting for target activation") }
+        cont.resume()
     }
 }

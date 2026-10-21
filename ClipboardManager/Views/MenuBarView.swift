@@ -6,6 +6,14 @@ struct MenuBarMenuView: View {
     let openSettings: () -> Void
 
     var body: some View {
+        if !AccessibilityService.shared.isAccessibilityGranted {
+            Button("⚠︎ Auto-paste needs Accessibility…") {
+                AccessibilityService.shared.openAccessibilitySettings()
+            }
+
+            Divider()
+        }
+
         Button("Open Clipboard History") { openHistory() }
             .keyboardShortcut("v", modifiers: .option)
 

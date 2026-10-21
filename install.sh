@@ -83,6 +83,8 @@ fi
 
 ok "Versão encontrada: ${VERSION}"
 
+UPDATING=0
+
 # ── 4. Verificar se já está instalado ────────────────────────────────────────
 if [[ -d "${INSTALL_DIR}/${APP_NAME}.app" ]]; then
     INSTALLED_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" \
@@ -99,6 +101,7 @@ if [[ -d "${INSTALL_DIR}/${APP_NAME}.app" ]]; then
         exit 0
     fi
     warn "Atualizando de ${INSTALLED_VERSION} → ${CLEAN_VERSION}…"
+    UPDATING=1
 fi
 
 # ── 5. Download ───────────────────────────────────────────────────────────────
@@ -133,6 +136,15 @@ xattr -dr com.apple.quarantine "${INSTALL_DIR}/${APP_NAME}.app" 2>/dev/null && \
     ok "Quarentena removida." || \
     warn "Não foi possível remover quarentena (pode ser necessário permissão)."
 
+# ── 8b. Resetar permissão de Acessibilidade (somente em atualização) ──────────
+# A assinatura ad-hoc muda a cada versão, então a permissão antiga fica "ligada"
+# mas inválida. O reset remove só a entrada deste app para o prompt reaparecer limpo.
+if [[ "$UPDATING" == "1" ]]; then
+    tccutil reset Accessibility com.weethub.ClipboardManager &>/dev/null && \
+        ok "Permissão de Acessibilidade resetada — conceda novamente ao abrir o app." || \
+        warn "Não foi possível resetar a permissão. Se o auto-paste não funcionar, remova e adicione o app em Acessibilidade."
+fi
+
 # ── 9. Abrir o app ────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}${BOLD}✓ Clipboard Manager instalado com sucesso!${RESET}"
@@ -140,6 +152,7 @@ echo ""
 echo "  • Atalho global: ⌥V (Option + V)"
 echo "  • Na primeira execução, conceda permissão de Acessibilidade"
 echo "    em: Ajustes do Sistema → Privacidade → Acessibilidade"
+echo "  • Após atualizar, reconceda a permissão (o app é assinado ad-hoc)"
 echo ""
 
 read -r -p "  Deseja abrir o Clipboard Manager agora? [S/n] " REPLY

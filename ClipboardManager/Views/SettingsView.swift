@@ -22,6 +22,7 @@ struct SettingsView: View {
 
 private struct GeneralTab: View {
     @Bindable var settings: Settings
+    @State private var accessibilityGranted = AccessibilityService.shared.isAccessibilityGranted
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -54,6 +55,28 @@ private struct GeneralTab: View {
                         step: 1)
             }
 
+            Section {
+                LabeledContent("Accessibility") {
+                    HStack(spacing: 6) {
+                        Image(systemName: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(accessibilityGranted ? .green : .orange)
+                        Text(accessibilityGranted ? "Granted" : "Not granted")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if !accessibilityGranted {
+                    Button("Open Accessibility Settings…") {
+                        AccessibilityService.shared.openAccessibilitySettings()
+                    }
+                }
+            } header: {
+                Text("Auto-paste")
+            } footer: {
+                Text("Required to paste the selected item automatically. After updating the app, remove and re-add it in Accessibility if this shows \"Not granted\".")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("About") {
                 LabeledContent("Version") {
                     Text(appVersion)
@@ -63,6 +86,11 @@ private struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
+        .onAppear { accessibilityGranted = AccessibilityService.shared.isAccessibilityGranted }
+        // Re-check when the user comes back from System Settings.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            accessibilityGranted = AccessibilityService.shared.isAccessibilityGranted
+        }
     }
 
     private func applyLaunchAtLogin(_ enabled: Bool) {

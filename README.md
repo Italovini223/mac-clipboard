@@ -80,6 +80,8 @@ Dentro do Xcode:
 4. Na primeira execução, conceda permissão de **Acessibilidade** quando solicitado:  
    `Ajustes do Sistema → Privacidade e Segurança → Acessibilidade`
 
+> **Após atualizar o app:** como o app é assinado ad-hoc, cada versão é vista pelo macOS como um app novo e a permissão de Acessibilidade deixa de valer (o item continua ligado, mas o auto-paste não funciona). Remova o **Clipboard Manager** da lista de Acessibilidade (−) e adicione novamente, ou rode `tccutil reset Accessibility com.weethub.ClipboardManager` e conceda de novo.
+
 ---
 
 ### Após a instalação
@@ -173,11 +175,15 @@ Registered via Carbon `RegisterEventHotKey` — works without Accessibility perm
 
 When an item is selected, the app:
 1. Writes the content to `NSPasteboard`
-2. Dismisses the popup (re-activating the previous app)
-3. Waits 200 ms
-4. Sends a ⌘V `CGEvent` to the session event tap
+2. Dismisses the popup (the previous app never lost focus — the panel is non-activating)
+3. Waits for the panel to give up key status (re-activating the previous app only if you switched away)
+4. Sends a ⌘V `CGEvent` to the HID event tap
 
-Requires **Accessibility** permission (System Settings → Privacy & Security → Accessibility).
+Requires **Accessibility** permission (System Settings → Privacy & Security → Accessibility). Status is shown in Settings → General and in the menu bar menu; without it the item is still copied, so you can press ⌘V yourself.
+
+> **After updating the app:** releases are ad-hoc signed, so macOS treats each version as a new app and the Accessibility permission stops applying (the entry stays switched on but auto-paste does nothing). Remove **Clipboard Manager** from the Accessibility list (−) and add it again — or run `tccutil reset Accessibility com.weethub.ClipboardManager` and grant it again when prompted. `install.sh` does the reset for you when it updates an existing install.
+
+To debug auto-paste: `log stream --predicate 'subsystem == "com.weethub.ClipboardManager"'`
 
 ## Privacy
 
