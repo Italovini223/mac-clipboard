@@ -83,11 +83,15 @@ struct ShortcutRecorderView: View {
                         .font(.system(.body, design: .monospaced))
                         .foregroundStyle(recorder.isRecording ? Color.accentColor : Color.primary)
                         .frame(minWidth: 90)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        // Keycap; o tint de acento marca o estado "gravando".
+                        .background(
+                            recorder.isRecording ? AnyShapeStyle(Color.accentColor.opacity(0.15)) : AnyShapeStyle(.quaternary),
+                            in: RoundedRectangle(cornerRadius: Metrics.keycapRadius, style: .continuous)
+                        )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 5)
+                            RoundedRectangle(cornerRadius: Metrics.keycapRadius, style: .continuous)
                                 .strokeBorder(Color.accentColor, lineWidth: recorder.isRecording ? 1.5 : 0)
                         }
                 }
@@ -98,6 +102,8 @@ struct ShortcutRecorderView: View {
                     recorder.message = nil
                     settings.hotkey = .default
                 }
+                .adaptiveGlassButton()
+                .controlSize(.small)
                 .disabled(settings.hotkey == .default && !recorder.isRecording)
             }
 

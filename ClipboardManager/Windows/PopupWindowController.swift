@@ -141,7 +141,7 @@ final class PopupWindowController {
         hosting.translatesAutoresizingMaskIntoConstraints = false
 
         let p = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
+            contentRect: NSRect(origin: .zero, size: Metrics.panelSize),
             styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -151,6 +151,8 @@ final class PopupWindowController {
         p.collectionBehavior  = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.isMovableByWindowBackground = false
         p.backgroundColor = .clear
+        // O glass (ou a sombra manual do fallback) desenha a própria sombra; a margem transparente
+        // da view evita que ela seja cortada pela janela.
         p.hasShadow = false
         p.contentView = hosting
 
@@ -180,11 +182,14 @@ final class PopupWindowController {
         }) ?? NSScreen.main ?? NSScreen.screens[0]
 
         let sf = screen.visibleFrame
-        let pw: CGFloat = 640
-        let ph: CGFloat = 480
-        let x = sf.midX - pw / 2
-        let y = sf.midY - ph / 2 + sf.height * 0.1
-        panel.setFrame(NSRect(x: x, y: y, width: pw, height: ph), display: false)
+        let size = Metrics.panelSize
+        // O card é ancorado no topo da janela: fixa onde fica o topo do card (mesma altura de antes,
+        // quando o card de altura máxima era centralizado) em vez do centro.
+        let cardTop = sf.midY + sf.height * 0.1 + Metrics.cardMaxHeight / 2
+        let top = min(cardTop + Metrics.panelOuterMargin, sf.maxY)
+        let x = sf.midX - size.width / 2
+        let y = max(top - size.height, sf.minY)
+        panel.setFrame(NSRect(x: x, y: y, width: size.width, height: size.height), display: false)
     }
 }
 

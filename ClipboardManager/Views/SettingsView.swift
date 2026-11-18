@@ -13,8 +13,9 @@ struct SettingsView: View {
             HotkeysTab(settings: settings)
                 .tabItem { Label("Hotkeys", systemImage: "keyboard") }
         }
-        .frame(width: 480, height: 360)
-        .padding()
+        // Largura fixa; a altura segue o conteúdo de cada aba e o TabView adota o estilo
+        // de toolbar do macOS 26 sozinho.
+        .frame(width: 520)
     }
 }
 
@@ -57,17 +58,13 @@ private struct GeneralTab: View {
 
             Section {
                 LabeledContent("Accessibility") {
-                    HStack(spacing: 6) {
-                        Image(systemName: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(accessibilityGranted ? .green : .orange)
-                        Text(accessibilityGranted ? "Granted" : "Not granted")
-                            .foregroundStyle(.secondary)
-                    }
+                    accessibilityBadge
                 }
                 if !accessibilityGranted {
                     Button("Open Accessibility Settings…") {
                         AccessibilityService.shared.openAccessibilitySettings()
                     }
+                    .adaptiveGlassButton()
                 }
             } header: {
                 Text("Auto-paste")
@@ -91,6 +88,21 @@ private struct GeneralTab: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             accessibilityGranted = AccessibilityService.shared.isAccessibilityGranted
         }
+    }
+
+    /// Cápsula de estado: verde = concedida, laranja = pendente (a cor é o estado, não decoração).
+    private var accessibilityBadge: some View {
+        let tint: Color = accessibilityGranted ? .green : .orange
+        return HStack(spacing: 5) {
+            Image(systemName: accessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+            Text(accessibilityGranted ? "Granted" : "Not granted")
+        }
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(tint)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 3)
+        .background(tint.opacity(0.15), in: Capsule())
+        .accessibilityElement(children: .combine)
     }
 
     private func applyLaunchAtLogin(_ enabled: Bool) {
@@ -121,8 +133,14 @@ private struct PrivacyTab: View {
 
             Section {
                 ForEach(settings.ignoredApps, id: \.self) { app in
-                    HStack {
-                        Text(app).font(.system(.body, design: .monospaced))
+                    HStack(spacing: 10) {
+                        appIcon(for: app)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(AppIconCache.shared.name(for: app))
+                            Text(app)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                         Spacer()
                         Button(role: .destructive) {
                             settings.ignoredApps.removeAll { $0 == app }
@@ -131,6 +149,7 @@ private struct PrivacyTab: View {
                                 .foregroundStyle(.red)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Remove \(AppIconCache.shared.name(for: app))")
                     }
                 }
 
@@ -154,6 +173,25 @@ private struct PrivacyTab: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    /// Ícone do app; apps não instalados ganham um selo genérico do mesmo tamanho.
+    @ViewBuilder
+    private func appIcon(for bundleId: String) -> some View {
+        if let icon = AppIconCache.shared.icon(for: bundleId) {
+            Image(nsImage: icon)
+                .resizable()
+                .frame(width: 24, height: 24)
+        } else {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.primary.opacity(0.08))
+                .frame(width: 24, height: 24)
+                .overlay {
+                    Image(systemName: "app.dashed")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+        }
     }
 }
 

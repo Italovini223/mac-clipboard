@@ -151,10 +151,15 @@ ClipboardManager/
 ├── Services/               ClipboardMonitor, StorageService, HotkeyService, AccessibilityService
 ├── ViewModels/             ClipboardViewModel
 ├── Views/                  MainPopupView, ClipboardItemRow, MenuBarView, SettingsView
+│   └── Glass/              GlassSurface, GlassButtonStyle, Metrics, Haptics, AppIconCache
 ├── Windows/                PopupWindowController (NSPanel)
 ├── Persistence/            SQLiteManager (GRDB + migrations)
 └── Resources/              Info.plist, Entitlements, LaunchAgent, Assets
 ```
+
+## Visual
+
+On macOS 26 (Tahoe) the popup and buttons use native Liquid Glass; on macOS 14–25 they fall back to system materials. The glass code lives in `Views/Glass/` and is guarded by `#available`, so the app still runs on macOS 14+. **Building the glass look requires Xcode 26** (SDK 26); the release workflow selects Xcode 26 and fails before publishing otherwise. Reduce Transparency, Increase Contrast and Reduce Motion are respected.
 
 ## Database
 

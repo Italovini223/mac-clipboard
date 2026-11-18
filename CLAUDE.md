@@ -191,6 +191,14 @@ collectionBehavior:  [.canJoinAllSpaces, .fullScreenAuxiliary]
 ### Hotkey customizável
 `Settings.hotkey` (didSet) salva em UserDefaults e posta `.hotkeyDidChange`; o `AppDelegate` relê com `HotkeyShortcut.load()` e chama `HotkeyService.update(to:)`. Não compartilhar a instância de `Settings` (a janela de Settings pode ter outra). Se o macOS recusar (`eventHotKeyExistsErr`), o anterior é restaurado no UserDefaults e `.hotkeyRegistrationFailed` avisa a UI. O recorder posta `.hotkeyRecordingDidBegin/End` para suspender/retomar o atalho durante a gravação. O event handler Carbon é instalado uma única vez.
 
+### Visual (Liquid Glass)
+- **macOS 26+:** o painel do popup usa glass nativo (`.glassEffect`) e os botões `.buttonStyle(.glass)`. **macOS 14–25:** fallback explícito de `.regularMaterial` + traço + sombra manual. Reduce Transparency usa fundo sólido; Increase Contrast reforça os traços.
+- O glass é a camada de controle (painel, botões); linhas de lista são conteúdo com fundo plano. Não aninhar glass em glass. Tint só para estado (seleção, gravando atalho, permissão ok/pendente) e identificação de tipo no selo.
+- Todo uso de glass passa por `Views/Glass/` e fica em `#if compiler(>=6.2)` + `if #available(macOS 26, *)`, com o fallback no `else`. **Compilar o glass exige Xcode 26 (SDK 26)**; o `release.yml` seleciona o Xcode 26 e falha antes de publicar se o SDK for < 26.
+- Tamanho do painel e raios ficam em `Metrics` (`panelSize` é usado por `createPanel` e `positionPanel`). A view tem margem externa transparente de 24pt para a sombra/refração não serem cortadas, e o card é ancorado no topo da janela.
+- Debug: `-ForceMaterialFallback YES` (argumento de launch) força o fallback de material no macOS 26.
+- Haptics só em cliques (trackpad), nunca em teclado.
+
 ### Filtro de conteúdo sensível
 `ClipboardMonitor` tem regex patterns para JWT (`eyJ...`), API keys (`sk-`, `ghp_`, `AKIA`), chaves PEM e Bearer tokens. Se `settings.ignorePasswords` ou `settings.ignoreApiKeys` estiver ligado, o item é descartado silenciosamente.
 
