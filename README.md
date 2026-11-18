@@ -23,7 +23,7 @@ O script faz tudo automaticamente:
 5. Remove o atributo de quarentena do Gatekeeper
 6. Oferece abrir o app na hora
 
-Após a instalação, o app aparece na barra de menus. Use **⌥V** para abrir o histórico.
+Após a instalação, o app aparece na barra de menus. Use **⌥V** (padrão, configurável em Settings → Hotkeys) para abrir o histórico.
 
 ---
 
@@ -88,7 +88,7 @@ Dentro do Xcode:
 
 | Ação | Como fazer |
 |---|---|
-| Abrir histórico | **⌥V** (Option + V) em qualquer app |
+| Abrir histórico | **⌥V** (Option + V) em qualquer app — padrão, configurável em Settings → Hotkeys |
 | Navegar pelos itens | Setas ↑ ↓ |
 | Selecionar e colar | Enter |
 | Pesquisar | Digite diretamente no popup |
@@ -113,7 +113,7 @@ rm -rf ~/Library/Preferences/com.weethub.ClipboardManager.plist
 
 ## Funcionalidades
 
-- **⌥V** — abre o popup em qualquer app, pesquisa instantânea, navegação por teclado
+- **⌥V** (configurável) — abre o popup em qualquer app, pesquisa instantânea, navegação por teclado
 - **Histórico persistente** — SQLite com busca full-text (FTS5), sobrevive a reinicializações
 - **Favoritos** — fixe itens importantes; nunca são removidos automaticamente
 - **Filtro inteligente** — ignora tokens JWT, chaves de API e conteúdo de gerenciadores de senhas
@@ -167,7 +167,7 @@ clipboard_fts      -- FTS5 virtual table, auto-synced with triggers
 
 ## Hotkey
 
-Default: **⌥V** (Option + V)
+Default: **⌥V** (Option + V). Configurable in **Settings → Hotkeys**: click the shortcut and press the new combination (at least one of ⌘ ⌃ ⌥, or an F-key on its own). Esc cancels; Delete or Reset restores ⌥V. If another app already owns the combination, the previous shortcut is kept.
 
 Registered via Carbon `RegisterEventHotKey` — works without Accessibility permission, works in all spaces and full-screen apps.
 

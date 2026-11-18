@@ -10,7 +10,7 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gear") }
             PrivacyTab(settings: settings)
                 .tabItem { Label("Privacy", systemImage: "lock.shield") }
-            HotkeysTab()
+            HotkeysTab(settings: settings)
                 .tabItem { Label("Hotkeys", systemImage: "keyboard") }
         }
         .frame(width: 480, height: 360)
@@ -160,21 +160,20 @@ private struct PrivacyTab: View {
 // MARK: - Hotkeys
 
 private struct HotkeysTab: View {
+    @Bindable var settings: Settings
+
     var body: some View {
         Form {
-            Section("Global Shortcuts") {
-                LabeledContent("Open History") {
-                    Text("⌥ V")
-                        .font(.system(.body, design: .monospaced))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
-                }
-            }
             Section {
-                Text("Custom hotkey binding will be available in a future update.")
-                    .foregroundStyle(.secondary)
+                LabeledContent("Open History") {
+                    ShortcutRecorderView(settings: settings)
+                }
+            } header: {
+                Text("Global Shortcuts")
+            } footer: {
+                Text("Click the shortcut and press the new combination. Esc cancels; Delete or Reset restores \(HotkeyShortcut.default.displayString).")
                     .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

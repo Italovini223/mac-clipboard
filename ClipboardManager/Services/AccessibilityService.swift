@@ -83,10 +83,11 @@ final class AccessibilityService: Sendable {
             return false
         }
 
-        // The hotkey is ⌥V: if ⌥ is still held the target app would receive ⌥⌘V.
-        let waited = await waitForOptionRelease(timeout: .milliseconds(300))
+        // If a modifier of the hotkey is still held the target app would receive e.g. ⌥⌘V, or
+        // ⇧⌘V ("paste and match style") when the hotkey includes ⇧.
+        let waited = await waitForHotkeyModifiersRelease(timeout: .milliseconds(300))
         let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "nil"
-        Logger.paste.info("simulatePaste: posting ⌘V (frontmost=\(frontmost, privacy: .public), optionStillHeld=\(!waited))")
+        Logger.paste.info("simulatePaste: posting ⌘V (frontmost=\(frontmost, privacy: .public), hotkeyModifiersStillHeld=\(!waited))")
 
         let src = CGEventSource(stateID: .combinedSessionState)
         for keyDown in [true, false] {
@@ -97,11 +98,18 @@ final class AccessibilityService: Sendable {
         return true
     }
 
-    /// Polls until ⌥ is released. Returns false if it's still down after `timeout`.
-    private func waitForOptionRelease(timeout: Duration) async -> Bool {
+    /// Polls until the ⌃⌥⇧ of the configured hotkey are released (⌘ is posted by us anyway).
+    /// Returns false if any is still down after `timeout`.
+    private func waitForHotkeyModifiersRelease(timeout: Duration) async -> Bool {
+        let shortcut = HotkeyShortcut.load()
+        var mask: CGEventFlags = []
+        if shortcut.hasControl { mask.insert(.maskControl) }
+        if shortcut.hasOption  { mask.insert(.maskAlternate) }
+        if shortcut.hasShift   { mask.insert(.maskShift) }
+
         let step = Duration.milliseconds(10)
         var elapsed = Duration.zero
-        while CGEventSource.flagsState(.combinedSessionState).contains(.maskAlternate) {
+        while !CGEventSource.flagsState(.combinedSessionState).intersection(mask).isEmpty {
             if elapsed >= timeout { return false }
             try? await Task.sleep(for: step)
             elapsed += step

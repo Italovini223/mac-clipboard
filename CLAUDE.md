@@ -2,7 +2,7 @@
 
 ## O que é este projeto
 
-App nativo macOS de gerenciamento de área de transferência (clipboard manager), similar ao Maccy e Paste. Roda exclusivamente na barra de menus (sem ícone no Dock), monitora o `NSPasteboard` continuamente, persiste o histórico em SQLite e expõe um popup estilo Spotlight via atalho global **⌥V**.
+App nativo macOS de gerenciamento de área de transferência (clipboard manager), similar ao Maccy e Paste. Roda exclusivamente na barra de menus (sem ícone no Dock), monitora o `NSPasteboard` continuamente, persiste o histórico em SQLite e expõe um popup estilo Spotlight via atalho global (padrão **⌥V**, configurável em Settings → Hotkeys).
 
 Código 100% local — sem rede, sem telemetria, sem dependência de serviços externos.
 
@@ -49,12 +49,13 @@ ClipboardManager/
 │
 ├── Models/
 │   ├── ClipboardItem.swift         GRDB Record (struct), ContentType enum
-│   └── Settings.swift              @Observable, UserDefaults-backed
+│   ├── Settings.swift              @Observable, UserDefaults-backed
+│   └── HotkeyShortcut.swift        Atalho global (keyCode + modificadores Carbon), JSON em UserDefaults, displayString
 │
 ├── Services/
 │   ├── ClipboardMonitor.swift      Timer 0.5s, polls NSPasteboard.changeCount
 │   ├── StorageService.swift        GRDB facade: insert/fetch/search/delete
-│   ├── HotkeyService.swift         Carbon RegisterEventHotKey wrapper
+│   ├── HotkeyService.swift         Carbon RegisterEventHotKey wrapper (register/update/suspend/resume)
 │   └── AccessibilityService.swift  CGEvent ⌘V simulation (auto-paste)
 │
 ├── ViewModels/
@@ -64,6 +65,7 @@ ClipboardManager/
 │   ├── MainPopupView.swift         Popup principal (busca + lista)
 │   ├── ClipboardItemRow.swift      Linha do histórico com context menu
 │   ├── MenuBarView.swift           Itens do menu da barra (MenuBarMenuView)
+│   ├── ShortcutRecorderView.swift  Gravador de atalho (NSEvent local monitor) da aba Hotkeys
 │   └── SettingsView.swift          TabView: General / Privacy / Hotkeys
 │
 ├── Windows/
@@ -186,6 +188,9 @@ collectionBehavior:  [.canJoinAllSpaces, .fullScreenAuxiliary]
 ```
 `.nonactivatingPanel` + `makeKeyAndOrderFront` = o painel recebe teclado mas não muda o app ativo.
 
+### Hotkey customizável
+`Settings.hotkey` (didSet) salva em UserDefaults e posta `.hotkeyDidChange`; o `AppDelegate` relê com `HotkeyShortcut.load()` e chama `HotkeyService.update(to:)`. Não compartilhar a instância de `Settings` (a janela de Settings pode ter outra). Se o macOS recusar (`eventHotKeyExistsErr`), o anterior é restaurado no UserDefaults e `.hotkeyRegistrationFailed` avisa a UI. O recorder posta `.hotkeyRecordingDidBegin/End` para suspender/retomar o atalho durante a gravação. O event handler Carbon é instalado uma única vez.
+
 ### Filtro de conteúdo sensível
 `ClipboardMonitor` tem regex patterns para JWT (`eyJ...`), API keys (`sk-`, `ghp_`, `AKIA`), chaves PEM e Bearer tokens. Se `settings.ignorePasswords` ou `settings.ignoreApiKeys` estiver ligado, o item é descartado silenciosamente.
 
@@ -216,6 +221,7 @@ Todas persistidas em `UserDefaults`. Valores padrão:
 | `ignoredApps` | 1Password, Bitwarden, etc | bundle IDs ignorados |
 | `launchAtLogin` | `false` | usa `SMAppService.mainApp` |
 | `showInMenuBar` | `true` | controla visibilidade |
+| `hotkey` | ⌥V | atalho global (JSON em `hotkey`); troca chega ao `HotkeyService` via notificação `.hotkeyDidChange` |
 
 ---
 
@@ -223,7 +229,7 @@ Todas persistidas em `UserDefaults`. Valores padrão:
 
 | Fase | Status | Escopo |
 |---|---|---|
-| 1 | Completa | Monitor, histórico, FTS, popup, ⌥V, auto-paste, filtro sensível |
+| 1 | Completa | Monitor, histórico, FTS, popup, ⌥V (hotkey configurável), auto-paste, filtro sensível |
 | 2 | Planejada | UI de favoritos, melhorias de configurações |
 | 3 | Planejada | OCR via Vision framework, Snippets (`/keyword`), sync iCloud |
 

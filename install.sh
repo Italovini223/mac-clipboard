@@ -149,7 +149,7 @@ fi
 echo ""
 echo -e "${GREEN}${BOLD}✓ Clipboard Manager instalado com sucesso!${RESET}"
 echo ""
-echo "  • Atalho global: ⌥V (Option + V)"
+echo "  • Atalho global: ⌥V (Option + V) por padrão, configurável em Settings → Hotkeys"
 echo "  • Na primeira execução, conceda permissão de Acessibilidade"
 echo "    em: Ajustes do Sistema → Privacidade → Acessibilidade"
 echo "  • Após atualizar, reconceda a permissão (o app é assinado ad-hoc)"

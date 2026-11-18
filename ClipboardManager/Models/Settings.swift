@@ -24,6 +24,15 @@ final class Settings {
     var showInMenuBar: Bool {
         didSet { UserDefaults.standard.set(showInMenuBar, forKey: "showInMenuBar") }
     }
+    // A janela de Settings pode ter outra instância de Settings que o AppDelegate; por isso a troca
+    // chega ao HotkeyService via UserDefaults + notificação, nunca pela instância compartilhada.
+    var hotkey: HotkeyShortcut {
+        didSet {
+            guard hotkey != oldValue else { return }
+            hotkey.save()
+            NotificationCenter.default.post(name: .hotkeyDidChange, object: nil)
+        }
+    }
 
     init() {
         let defaults = UserDefaults.standard
@@ -40,6 +49,7 @@ final class Settings {
         ]
         launchAtLogin  = defaults.bool(forKey: "launchAtLogin")
         showInMenuBar  = defaults.object(forKey: "showInMenuBar") as? Bool ?? true
+        hotkey         = HotkeyShortcut.load()
     }
 }
 
